@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // Role-based access control (RBAC):
+    // Verifies admin access via:
+    // 1. Existence of verified admin document in /admins/{uid}
+    // 2. Or token custom claim `admin: true`
+    // 3. Or designated administrator with verified email
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.keys().hasAll(['admin']) && request.auth.token.admin == true) ||
+        (request.auth.token.email_verified == true && request.auth.token.email == 'tarunkumarc1201@gmail.com')
+      );
+    }
+
+    function isValidMisRecord(data) {
+      return data.keys().hasAll(['serialNumber', 'branch', 'date', 'accountNumber', 'customerName', 'amount', 'status']) &&
+        data.serialNumber is string && data.serialNumber.size() <= 100 &&
+        data.branch is string && data.branch == 'Hitec City Rai Durg' &&
+        data.date is string && data.date.size() <= 50 &&
+        data.accountNumber is string && data.accountNumber.size() <= 100 &&
+        data.customerName is string && data.customerName.size() <= 150 &&
+        data.amount is number &&
+        data.status is string && (data.status == 'Pending' || data.status == 'Submitted' || data.status == 'Completed') &&
+        (!data.keys().hasAny(['legalReportUrl']) || data.legalReportUrl == null || (data.legalReportUrl is string && data.legalReportUrl.size() <= 1500)) &&
+        (!data.keys().hasAny(['legalReportPath']) || data.legalReportPath == null || (data.legalReportPath is string && data.legalReportPath.size() <= 500)) &&
+        (!data.keys().hasAny(['legalReportName']) || data.legalReportName == null || (data.legalReportName is string && data.legalReportName.size() <= 255)) &&
+        (!data.keys().hasAny(['legalReportSize']) || data.legalReportSize == null || (data.legalReportSize is number && data.legalReportSize <= 25000000)) &&
+        (!data.keys().hasAny(['legalReportUploadedAt']) || data.legalReportUploadedAt == null || (data.legalReportUploadedAt is string && data.legalReportUploadedAt.size() <= 100)) &&
+        (!data.keys().hasAny(['legalReportFileType']) || data.legalReportFileType == null || (data.legalReportFileType is string && data.legalReportFileType.size() <= 50));
+    }
+
+    // Default deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Admins collection:
+    // Any signed-in user can check their own admin status; only verified admins can read all or grant/modify admin records
+    match /admins/{adminId} {
+      allow read: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // MIS Records:
+    // Authenticated users have READ-ONLY access (can view records and reports)
+    // ONLY admins have create, update, and delete access
+    match /mis_records/{recordId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && isValidId(recordId) && isValidMisRecord(incoming());
+      allow update: if isAdmin() && isValidId(recordId) && isValidMisRecord(incoming());
+      allow delete: if isAdmin() && isValidId(recordId);
+    }
+  }
+}

@@ -1,0 +1,43 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.keys().hasAll(['admin']) && request.auth.token.admin == true) ||
+        (request.auth.token.email_verified == true && request.auth.token.email == 'tarunkumarc1201@gmail.com')
+      );
+    }
+
+    // Legal reports storage path: /legal_reports/{fileName}
+    match /legal_reports/{reportFile} {
+      // Authenticated users can view/download legal reports
+      allow read: if isSignedIn();
+
+      // Only administrators can upload, replace, or delete legal report files
+      // Enforce PDF, DOC, DOCX MIME types or extensions, and size limit under 10MB
+      allow write: if isAdmin() &&
+        request.resource.size <= 10 * 1024 * 1024 &&
+        (
+          request.resource.contentType in [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/x-msword'
+          ] ||
+          reportFile.matches('.*\\.(pdf|doc|docx|PDF|DOC|DOCX)$')
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    // Default deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

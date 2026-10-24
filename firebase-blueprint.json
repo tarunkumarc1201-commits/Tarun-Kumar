@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "MisRecord": {
+      "title": "MIS Record",
+      "description": "An MIS record item tracking file status, branch, customer, amounts, and metadata.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "serialNumber": { "type": "string" },
+        "branch": { "type": "string" },
+        "date": { "type": "string" },
+        "accountNumber": { "type": "string" },
+        "customerName": { "type": "string" },
+        "takeoverBank": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Submitted", "Completed"] },
+        "pddDate": { "type": "string" },
+        "bankPersonName": { "type": "string" },
+        "rpPerson": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "legalReportUrl": { "type": "string" },
+        "legalReportPath": { "type": "string" },
+        "legalReportName": { "type": "string" },
+        "legalReportSize": { "type": "number" },
+        "legalReportUploadedAt": { "type": "string" },
+        "legalReportFileType": { "type": "string" }
+      },
+      "required": ["serialNumber", "branch", "date", "accountNumber", "customerName", "amount", "status"]
+    },
+    "AdminUser": {
+      "title": "Admin User",
+      "description": "Stores administrator authorization and metadata for role-based access control.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin"] },
+        "isDesignatedAdmin": { "type": "boolean" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/mis_records/{recordId}": {
+      "schema": { "$ref": "#/entities/MisRecord" },
+      "description": "Stores MIS records created by users. Read-only for authenticated users; write-restricted to admins."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Stores administrator user privileges for role-based access control."
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "SS Innovative MIS",
+  "description": "Professional Management Information System (MIS) dashboard for tracking files, branches, status, and reports with bulk import and WhatsApp sharing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
